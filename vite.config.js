@@ -2,13 +2,21 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
-export default defineConfig(({ mode }) => ({
-  // GitHub Pages 项目站点地址为 https://<user>.github.io/nurjan/
-  base: mode === 'production' ? '/nurjan/' : '/',
+export default defineConfig({
+  base: '/',
   plugins: [vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8787',
+        changeOrigin: true
+      }
     }
   },
   test: {
@@ -19,8 +27,8 @@ export default defineConfig(({ mode }) => ({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
-      include: ['src/**/*.{js,vue}'],
-      exclude: ['src/main.js'],
+      include: ['src/**/*.{js,vue}', 'server/**/*.js'],
+      exclude: ['src/main.js', 'server/index.js'],
       thresholds: {
         lines: 80,
         functions: 80,
@@ -29,4 +37,4 @@ export default defineConfig(({ mode }) => ({
       }
     }
   }
-}))
+})
