@@ -3,7 +3,9 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  base: '/',
+  // 使用相对基址：既能部署在 GitHub Pages 的项目子路径（/nurjan/）下，
+  // 也能在同源根路径（本地 node server/index.js）下正常工作。
+  base: './',
   plugins: [vue()],
   resolve: {
     alias: {
