@@ -69,23 +69,23 @@ npx serve .
 
 ## 版本管理
 
-已初始化 Git 并完成初始提交。推送到你自己的 GitHub 仓库，请先创建一个**空仓库**（不要勾选自动生成 README），然后在本目录执行：
+已初始化 Git 并托管于 GitHub 公开仓库：
+
+- 仓库地址：<https://github.com/shiyaka/nurjan>
+- 默认分支：`main`，已跟踪 `origin/main`
+
+日常提交与推送：
 
 ```bash
-# 1) 关联远程仓库（替换为你的地址）
-git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-
-# 2) 确认分支名为 main
-git branch -M main
-
-# 3) 首次推送并建立跟踪关系
-git push -u origin main
+git add .
+git commit -m "feat: 描述本次改动"
+git push
 ```
 
-若本机已登录 GitHub CLI，也可以一步完成：
+首次克隆：
 
 ```bash
-gh repo create <仓库名> --public --source=. --remote=origin --push
+git clone https://github.com/shiyaka/nurjan.git
 ```
 
 ## License
