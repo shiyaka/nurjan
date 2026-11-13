@@ -1,117 +1,123 @@
 # Nurjan · 轻量信息流
 
-一个用 **Vue 3 + Pinia** 写成的极简信息流小应用，数据保存在浏览器 **Local Storage**，无后端、无账号、无网络请求。项目以 TDD 方式开发：先写失败测试，再实现到测试全部通过。
+一个 **Vue 3 + Pinia** 前端 + **Hono REST API** 后端的极简信息流应用。数据保存在服务端**内存**中，无数据库、无账号、无第三方服务；服务重启后数据清空。
 
-- 线上地址：<https://shiyaka.github.io/nurjan/>
-- 仓库地址：<https://github.com/shiyaka/nurjan>
-- 旧版纯 HTML 实现归档在 [`legacy/`](./legacy)，可直接双击 `legacy/index.html` 对比。
+- 仓库：<https://github.com/shiyaka/nurjan>
+- 旧版纯 HTML 实现归档在 [`legacy/`](./legacy)（使用 localStorage，仅作参考）
+- 原 GitHub Pages 地址已停用，现由单台 Node 服务同时提供页面与 API
 
 ## 功能
 
-- **发布**：输入后点击「发布」或按 `Ctrl / Cmd + Enter`，内容即时置顶；空白内容不可发布。
-- **浏览**：按时间倒序展示，显示作者、相对时间（刚刚 / n 分钟前 / n 小时前 / 昨天 / 日期）。
-- **删除**：点击「删除」后按钮变为「确认删除」，再次点击才真正删除；3.2 秒无操作自动还原。
-- **持久化**：写入 Local Storage，刷新或重开页面后仍在；兼容旧版数据。
-- **健壮性**：空数据、损坏 JSON、非法字段、写入超限（配额）均有兜底，不会白屏。
-- **体验**：响应式布局（≤640px 适配）、键盘可完整操作、`focus-visible` 焦点样式、尊重系统「减少动效」偏好。
+- **发布**：输入后点击「发布」或 `Ctrl / Cmd + Enter`，请求后端写入内存并置顶；空白内容不可发布。
+- **浏览**：从 `GET /api/posts` 拉取，按时间倒序展示，显示作者与相对时间。
+- **删除**：两段式确认（3.2 秒超时还原），确认后调用 `DELETE /api/posts/:id`。
+- **反馈**：加载占位、空状态、发布/删除/失败 toast、提交中禁用。
+- **健壮性**：网络失败保留现有列表、空内容与超长内容双重校验（前端 + 后端）、JSON 解析失败返回 400。
+- **体验**：响应式（≤640px）、键盘可操作、`focus-visible`、尊重「减少动效」。
 
-## 技术栈
+## 架构
 
-| 层 | 选型 |
-| --- | --- |
-| 运行时 | Node.js 22 LTS |
-| 框架 | Vue 3（`<script setup>` 单文件组件） |
-| 状态 | Pinia（唯一数据源） |
-| 构建 | Vite 6 |
-| 测试 | Vitest 3 + @vue/test-utils + jsdom + v8 覆盖率 |
-| 存储 | localStorage（键：`stream.posts.v1`） |
-| 部署 | GitHub Actions → GitHub Pages |
+```
+浏览器
+  └── Vue 3 页面（Vite 构建）
+        ├── PostComposer / PostList / PostItem / EmptyState / ToastHost
+        ├── Pinia store（异步 actions：hydrate / add / remove）
+        └── src/api/posts.js ── fetch /api/posts ──┐
+                                                  │
+Node 进程（server/index.js）                       │
+  ├── Hono app（server/app.js）◀──────────────────┘
+  │     ├── GET/POST /api/posts
+  │     └── DELETE /api/posts/:id
+  ├── 内存仓库（server/store.js，进程重启即清空）
+  └── 静态托管 dist/ + SPA fallback
+```
+
+## REST API
+
+| 方法 | 路径 | 成功 | 失败 |
+| --- | --- | --- | --- |
+| GET | `/api/posts` | `200 { data: Post[] }`（倒序） | — |
+| POST | `/api/posts` | `201 { data: Post }` | `422 EMPTY_CONTENT` / `422 CONTENT_TOO_LONG` / `400 INVALID_JSON` |
+| DELETE | `/api/posts/:id` | `204` | `404 NOT_FOUND` |
+
+```json
+{
+  "id": "0f8c6a2e-6f0e-4c1c-9b23-2d1b6d9a1c11",
+  "content": "第一条内容",
+  "author": "我",
+  "createdAt": 1762934400000
+}
+```
+
+错误统一为 `{ "error": { "code": "EMPTY_CONTENT", "message": "内容不能为空" } }`；`content` 上限 280 字符，保存前会 trim。
 
 ## 快速开始
 
 ```bash
 npm install
-npm run dev        # 开发服务器 http://localhost:5173
+npm run dev        # 同时启动 web(5173) 与 api(8787)，Vite 已代理 /api
 ```
 
-其他命令：
+打开 <http://localhost:5173>。
 
 ```bash
-npm run test       # 监听模式
-npm run test:run   # 单次运行（CI 使用）
+npm run test       # Vitest 监听
+npm run test:run   # 单次运行
 npm run coverage   # 覆盖率，门槛 80%
-npm run build      # 生产构建，输出 dist/
-npm run preview    # 预览构建产物（注意 base 为 /nurjan/）
+npm run build      # 构建前端到 dist/
+npm start          # 生产模式：8787 端口同时提供 API 与 dist
 ```
+
+生产运行自定义端口（PowerShell）：
+
+```powershell
+$env:PORT = 3000; npm start
+```
+
+> 注意：数据是**进程内存**，重启 `npm start` 或 `npm run dev` 的 api 进程都会清空，这是本项目的设计取舍。
 
 ## 目录结构
 
 ```
 .
-├── index.html                     # Vite 入口
-├── vite.config.js                 # Vue 插件、@ 别名、base、Vitest 配置
+├── index.html                  # Vite 入口
+├── vite.config.js              # base '/'、/api 代理、Vitest 与覆盖率
+├── server/
+│   ├── store.js                # 内存仓库（可注入 clock/id，便于测试）
+│   ├── app.js                  # Hono 应用工厂，REST 路由与错误处理
+│   └── index.js                # Node 启动、静态托管 dist、SPA fallback
 ├── src/
-│   ├── main.js                    # createApp + Pinia + 全局样式
-│   ├── App.vue                    # 装配组件与 store、toast、跨标签页同步
-│   ├── constants.js               # 存储键、字数上限、作者、超时时间
-│   ├── components/                # AppHeader / PostComposer / PostList / PostItem / EmptyState / ToastHost
-│   ├── composables/useToast.js    # 单条轻提示状态与定时器
-│   ├── stores/posts.js            # Pinia store：hydrate / add / remove
-│   ├── utils/                     # time / storage / id
-│   └── styles/                    # tokens / base / components
+│   ├── api/posts.js            # fetch 客户端与 ApiError
+│   ├── stores/posts.js         # 异步 Pinia store
+│   ├── components/             # Header / Composer / List / Item / Empty / Toast
+│   ├── composables/useToast.js
+│   ├── utils/time.js
+│   ├── App.vue
+│   └── styles/
 ├── tests/
-│   ├── setup.js                   # jsdom 环境补丁与每例清理
-│   ├── unit/                      # time、storage、id、store
-│   └── components/                # PostComposer、PostItem、App
-├── legacy/                        # 旧版纯 HTML/CSS/JS 实现（归档）
-└── .github/workflows/deploy.yml   # 测试 + 构建 + 发布 Pages
+│   ├── server/                 # API 与仓库测试（node 环境）
+│   ├── unit/                   # api 客户端、store、time
+│   └── components/             # Composer、Item、App
+├── legacy/                     # 旧版纯 HTML + localStorage 实现
+└── .github/workflows/ci.yml    # 覆盖率测试 + 构建
 ```
 
-## 测试与 TDD
+## TDD
 
-先写测试并确认失败，再实现功能：
+开发顺序：先写失败测试，再实现到通过，最后重构。
 
-1. `tests/unit/time.spec.js`：相对时间的各分支（刚刚 / 分钟 / 小时 / 昨天 / 同年 / 跨年）。
-2. `tests/unit/storage.spec.js`：空值、损坏 JSON、非数组、脏字段过滤、超长截断、排序、写入成功与配额失败。
-3. `tests/unit/posts.store.spec.js`：hydrate、add 校验与置顶、remove、写入失败回滚。
-4. `tests/components/*.spec.js`：禁用态、字数计数、发布清空、XSS 纯文本渲染、两段删除、定时器清理、集成持久化。
+- 后端：`tests/server/api.spec.js` 覆盖增删查、校验、404、JSON 错误、排序与仓库隔离；
+- 前端：`tests/unit/api.spec.js` 覆盖成功、非 2xx、204、网络异常；store 测试覆盖加载/发布/删除与失败回滚；组件测试覆盖禁用态、XSS、两段删除与异步集成；
+- CI 在每次 push/PR 运行 `npm run coverage` 与 `npm run build`。
 
-当前状态：**7 个测试文件 / 43 个用例全部通过**，行覆盖率约 97%。
+## 部署说明
 
-## 数据结构
+GitHub Pages 只能托管静态文件，无法运行 Hono 服务，因此项目改为**单服务自托管**：
 
-存储键：`stream.posts.v1`（与旧版一致，可直接读取旧数据）
-
-```json
-[
-  {
-    "id": "0f8c6a2e-6f0e-4c1c-9b23-2d1b6d9a1c11",
-    "content": "第一条内容",
-    "author": "我",
-    "createdAt": 1762934400000
-  }
-]
-```
-
-- `content` 最长 280 字符，渲染时使用 Vue 插值（禁止 `v-html`），防止 XSS。
-- 读取时逐条校验并补默认值，脏数据被丢弃而非整体失败。
-- 写入失败（如 `QuotaExceededError`）会回滚内存状态并提示。
-
-## 部署
-
-推送到 `main` 后，GitHub Actions 会依次执行 `npm ci` → 覆盖率测试 → 构建 → 部署到 Pages。
-
-线上地址：<https://shiyaka.github.io/nurjan/>
-
-首次启用需在仓库 **Settings → Pages → Build and deployment** 中把 Source 设为 **GitHub Actions**（工作流中已声明 `enablement`）。
-
-## 版本管理
-
-```bash
-git add .
-git commit -m "feat: 描述本次改动"
-git push
-```
+1. 服务器安装 Node.js 20+；
+2. `npm ci && npm run build`；
+3. `PORT=8080 npm start`；
+4. 用 Nginx 等反向代理到该端口（或直接暴露），并配置 HTTPS。
 
 ## License
 
