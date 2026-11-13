@@ -176,6 +176,89 @@ describe('postsApi.remove', () => {
   })
 })
 
+describe('postsApi.update', () => {
+  const liked = { ...samplePost, liked: true, likeCount: 1, favorited: false }
+
+  it('PATCH /api/posts/:id 发送 JSON 并返回 data', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({ data: liked }))
+
+    const post = await postsApi.update('p1', { liked: true })
+
+    expect(post).toEqual(liked)
+
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/posts/p1')
+    expect(options.method).toBe('PATCH')
+    expect(options.headers['Content-Type']).toBe('application/json')
+    expect(JSON.parse(options.body)).toEqual({ liked: true })
+  })
+
+  it('id 会被 URL 编码', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({ data: samplePost }))
+
+    await postsApi.update('p/1', { favorited: true })
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/posts/p%2F1')
+  })
+
+  it('缺少 data 字段时抛 INVALID_RESPONSE', async () => {
+    stubFetch(async () => jsonResponse({ ok: true }))
+
+    const error = await postsApi.update('p1', { liked: true }).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.code).toBe('INVALID_RESPONSE')
+  })
+
+  it('404 NOT_FOUND 保留 code', async () => {
+    stubFetch(async () =>
+      jsonResponse({ error: { code: 'NOT_FOUND', message: '内容不存在' } }, 404)
+    )
+
+    const error = await postsApi.update('missing', { liked: true }).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(404)
+    expect(error.code).toBe('NOT_FOUND')
+  })
+
+  it('422 INVALID_PATCH 保留 code', async () => {
+    stubFetch(async () =>
+      jsonResponse({ error: { code: 'INVALID_PATCH', message: '没有可更新的字段' } }, 422)
+    )
+
+    const error = await postsApi.update('p1', { liked: 'yes' }).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(422)
+    expect(error.code).toBe('INVALID_PATCH')
+  })
+
+  it('400 INVALID_JSON 保留 code', async () => {
+    stubFetch(async () =>
+      jsonResponse({ error: { code: 'INVALID_JSON', message: '请求体不是合法 JSON' } }, 400)
+    )
+
+    const error = await postsApi.update('p1', { liked: true }).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(400)
+    expect(error.code).toBe('INVALID_JSON')
+  })
+
+  it('网络异常归一化为 NETWORK_ERROR', async () => {
+    stubFetch(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+
+    const error = await postsApi.update('p1', { liked: true }).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(0)
+    expect(error.code).toBe('NETWORK_ERROR')
+  })
+})
+
 describe('postsApi 错误归一化', () => {
   it('网络异常包装为 status 0 / NETWORK_ERROR', async () => {
     stubFetch(async () => {

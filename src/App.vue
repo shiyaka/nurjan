@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import PostComposer from '@/components/PostComposer.vue'
 import PostList from '@/components/PostList.vue'
@@ -16,6 +16,17 @@ const store = usePostsStore()
 const { message, visible, show } = useToast()
 
 const showLoading = computed(() => store.loading || (!store.hydrated && !store.error))
+
+const filter = ref('all')
+const visiblePosts = computed(() =>
+  filter.value === 'favorites'
+    ? store.sorted.filter((post) => post.favorited === true)
+    : store.sorted
+)
+const visibleCount = computed(() => visiblePosts.value.length)
+const showFavoritesEmpty = computed(
+  () => filter.value === 'favorites' && store.hydrated && visibleCount.value === 0
+)
 
 onMounted(() => {
   store.hydrate()
@@ -39,6 +50,20 @@ async function handleRemove(id) {
   const result = await store.remove(id)
   show(result.ok ? '已删除' : FAILURE_MESSAGE)
 }
+
+async function handleLike(id) {
+  const result = await store.toggleLike(id)
+  if (!result.ok && result.reason !== 'pending') {
+    show(FAILURE_MESSAGE)
+  }
+}
+
+async function handleFavorite(id) {
+  const result = await store.toggleFavorite(id)
+  if (!result.ok && result.reason !== 'pending') {
+    show(FAILURE_MESSAGE)
+  }
+}
 </script>
 
 <template>
@@ -53,10 +78,38 @@ async function handleRemove(id) {
     <section class="timeline" aria-labelledby="timeline-title">
       <div class="timeline__head">
         <h2 id="timeline-title" class="timeline__title">时间线</h2>
-        <span v-if="store.count > 0" id="post-count" class="chip">{{ store.count }} 条</span>
+        <div class="timeline__filters" role="group" aria-label="筛选内容">
+          <button
+            class="timeline__filter"
+            :class="{ 'is-active': filter === 'all' }"
+            data-filter="all"
+            type="button"
+            :aria-pressed="filter === 'all' ? 'true' : 'false'"
+            @click="filter = 'all'"
+          >
+            全部
+          </button>
+          <button
+            class="timeline__filter"
+            :class="{ 'is-active': filter === 'favorites' }"
+            data-filter="favorites"
+            type="button"
+            :aria-pressed="filter === 'favorites' ? 'true' : 'false'"
+            @click="filter = 'favorites'"
+          >
+            收藏
+          </button>
+        </div>
+        <span v-if="visibleCount > 0" id="post-count" class="chip">{{ visibleCount }} 条</span>
       </div>
 
-      <PostList :posts="store.sorted" @remove="handleRemove" />
+      <PostList
+        :posts="visiblePosts"
+        :is-pending="store.isPending"
+        @remove="handleRemove"
+        @like="handleLike"
+        @favorite="handleFavorite"
+      />
 
       <p v-if="showLoading" class="feed-loading" role="status">正在加载…</p>
       <div v-else-if="store.error && !store.hydrated" class="feed-error" role="alert">
@@ -64,6 +117,7 @@ async function handleRemove(id) {
         <button type="button" @click="store.hydrate()">重试</button>
       </div>
       <EmptyState v-else-if="store.hydrated && store.count === 0" />
+      <p v-else-if="showFavoritesEmpty" class="feed-empty">还没有收藏的内容</p>
     </section>
   </main>
 

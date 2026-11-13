@@ -63,3 +63,74 @@ describe('PostItem', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+describe('PostItem 点赞与收藏', () => {
+  it('未点赞时 aria-pressed 为 false 且显示点赞计数', () => {
+    const wrapper = mount(PostItem, {
+      props: { post: makePost({ liked: false, likeCount: 2, favorited: false }) }
+    })
+    const button = wrapper.get('.post__like')
+
+    expect(button.attributes('aria-pressed')).toBe('false')
+    expect(button.attributes('aria-label')).toBe('点赞')
+    expect(button.get('.reaction-btn__count').text()).toBe('2')
+    expect(button.get('svg').exists()).toBe(true)
+  })
+
+  it('已点赞时 aria-pressed 为 true 且提示取消点赞', () => {
+    const wrapper = mount(PostItem, {
+      props: { post: makePost({ liked: true, likeCount: 3, favorited: false }) }
+    })
+    const button = wrapper.get('.post__like')
+
+    expect(button.attributes('aria-pressed')).toBe('true')
+    expect(button.attributes('aria-label')).toBe('取消点赞')
+    expect(button.get('.reaction-btn__count').text()).toBe('3')
+  })
+
+  it('点击点赞抛出 like 事件且不直接改 post', async () => {
+    const post = makePost({ liked: false, likeCount: 0, favorited: false })
+    const wrapper = mount(PostItem, { props: { post } })
+
+    await wrapper.get('.post__like').trigger('click')
+
+    expect(wrapper.emitted('like')).toEqual([['p1']])
+    expect(post.liked).toBe(false)
+  })
+
+  it('收藏按钮的 aria 状态随 favorited 变化', async () => {
+    const wrapper = mount(PostItem, {
+      props: { post: makePost({ liked: false, likeCount: 0, favorited: false }) }
+    })
+    const button = wrapper.get('.post__favorite')
+
+    expect(button.attributes('aria-pressed')).toBe('false')
+    expect(button.attributes('aria-label')).toBe('收藏')
+    expect(button.get('svg').exists()).toBe(true)
+
+    await wrapper.setProps({ post: makePost({ liked: false, likeCount: 0, favorited: true }) })
+
+    expect(button.attributes('aria-pressed')).toBe('true')
+    expect(button.attributes('aria-label')).toBe('取消收藏')
+  })
+
+  it('点击收藏抛出 favorite 事件', async () => {
+    const wrapper = mount(PostItem, {
+      props: { post: makePost({ liked: false, likeCount: 0, favorited: false }) }
+    })
+
+    await wrapper.get('.post__favorite').trigger('click')
+
+    expect(wrapper.emitted('favorite')).toEqual([['p1']])
+  })
+
+  it('pending 时两个按钮都禁用', () => {
+    const wrapper = mount(PostItem, {
+      props: { post: makePost({ liked: false, likeCount: 0, favorited: false }), pending: true }
+    })
+
+    expect(wrapper.get('.post__like').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.post__favorite').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.post__delete').attributes('disabled')).toBeUndefined()
+  })
+})

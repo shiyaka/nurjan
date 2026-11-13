@@ -226,3 +226,122 @@ describe('App 集成', () => {
     wrapper.unmount()
   })
 })
+
+const basePost = {
+  id: 'a',
+  content: '可互动的内容',
+  author: '我',
+  createdAt: 1000,
+  liked: false,
+  likeCount: 0,
+  favorited: false
+}
+
+describe('App 点赞与收藏', () => {
+  it('点赞成功后按服务端返回更新状态与计数', async () => {
+    const updated = { ...basePost, liked: true, likeCount: 1 }
+    const fetchMock = stubFetch(async (url, options) => {
+      if (options?.method === 'PATCH') return jsonResponse({ data: updated })
+      return jsonResponse({ data: [basePost] })
+    })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    expect(wrapper.get('.post__like').attributes('aria-pressed')).toBe('false')
+
+    await wrapper.get('.post__like').trigger('click')
+    await flushPromises()
+
+    const button = wrapper.get('.post__like')
+    expect(button.attributes('aria-pressed')).toBe('true')
+    expect(button.attributes('aria-label')).toBe('取消点赞')
+    expect(button.text()).toContain('1')
+
+    const patchCall = fetchMock.mock.calls.find(([, options]) => options?.method === 'PATCH')
+    expect(patchCall[0]).toBe('/api/posts/a')
+    expect(JSON.parse(patchCall[1].body)).toEqual({ liked: true })
+    wrapper.unmount()
+  })
+
+  it('点赞失败时提示服务不可用且状态不变', async () => {
+    stubFetch(async (url, options) => {
+      if (options?.method === 'PATCH') return jsonResponse({ error: { code: 'BOOM' } }, 500)
+      return jsonResponse({ data: [basePost] })
+    })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.get('.post__like').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.post__like').attributes('aria-pressed')).toBe('false')
+    expect(wrapper.get('.toast').text()).toBe('操作失败，请检查服务是否可用')
+    wrapper.unmount()
+  })
+
+  it('收藏后切到收藏筛选只显示已收藏内容且计数一致', async () => {
+    const favorited = { ...basePost, id: 'b', createdAt: 2000, favorited: true }
+    const other = { ...basePost, id: 'c', createdAt: 3000 }
+    stubFetch(async () => jsonResponse({ data: [basePost, favorited, other] }))
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    expect(wrapper.get('#post-count').text()).toBe('3 条')
+
+    await wrapper.get('[data-filter="favorites"]').trigger('click')
+
+    const posts = wrapper.findAll('.post')
+    expect(posts).toHaveLength(1)
+    expect(posts[0].get('.post__content').text()).toBe('可互动的内容')
+    expect(wrapper.get('#post-count').text()).toBe('1 条')
+
+    await wrapper.get('[data-filter="all"]').trigger('click')
+
+    expect(wrapper.findAll('.post')).toHaveLength(3)
+    expect(wrapper.get('#post-count').text()).toBe('3 条')
+    wrapper.unmount()
+  })
+
+  it('收藏为空时显示提示且不显示计数徽标', async () => {
+    stubFetch(async () => jsonResponse({ data: [basePost] }))
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.get('[data-filter="favorites"]').trigger('click')
+
+    expect(wrapper.findAll('.post')).toHaveLength(0)
+    expect(wrapper.find('#post-count').exists()).toBe(false)
+    expect(wrapper.get('.feed-empty').text()).toContain('还没有收藏的内容')
+    expect(wrapper.find('.empty-state').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('在收藏筛选中取消收藏后卡片移出列表', async () => {
+    const favorited = { ...basePost, favorited: true }
+    const unfavorited = { ...basePost, favorited: false }
+    const fetchMock = stubFetch(async (url, options) => {
+      if (options?.method === 'PATCH') return jsonResponse({ data: unfavorited })
+      return jsonResponse({ data: [favorited] })
+    })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.get('[data-filter="favorites"]').trigger('click')
+    expect(wrapper.findAll('.post')).toHaveLength(1)
+
+    await wrapper.get('.post__favorite').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('.post')).toHaveLength(0)
+    expect(wrapper.get('.feed-empty').text()).toContain('还没有收藏的内容')
+
+    const patchCall = fetchMock.mock.calls.find(([, options]) => options?.method === 'PATCH')
+    expect(JSON.parse(patchCall[1].body)).toEqual({ favorited: false })
+    wrapper.unmount()
+  })
+})

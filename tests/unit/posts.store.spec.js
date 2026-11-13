@@ -39,6 +39,7 @@ function seedPosts(posts) {
 
 const older = { id: 'a', content: '旧', author: '我', createdAt: 1000 }
 const newer = { id: 'b', content: '新', author: '我', createdAt: 2000 }
+const likedPost = { ...older, liked: true, likeCount: 3, favorited: false }
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -254,5 +255,150 @@ describe('usePostsStore.remove', () => {
     expect(result).toEqual({ ok: false, reason: 'network' })
     expect(store.error).toBe('network')
     expect(store.items.map((post) => post.id)).toEqual(['b', 'a'])
+  })
+})
+
+describe('usePostsStore.toggleLike', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('未点赞时取反为 true，并用返回的 post 替换列表项', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({ data: likedPost }))
+    const store = seedPosts([{ ...older, liked: false, likeCount: 2, favorited: false }, newer])
+
+    const result = await store.toggleLike('a')
+
+    expect(result.ok).toBe(true)
+    expect(store.items[0]).toEqual(likedPost)
+    expect(store.items[1]).toEqual(newer)
+    expect(store.error).toBeNull()
+
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/posts/a')
+    expect(options.method).toBe('PATCH')
+    expect(JSON.parse(options.body)).toEqual({ liked: true })
+  })
+
+  it('已点赞时取反为 false', async () => {
+    const fetchMock = stubFetch(async () =>
+      jsonResponse({ data: { ...likedPost, liked: false, likeCount: 2 } })
+    )
+    const store = seedPosts([likedPost])
+
+    const result = await store.toggleLike('a')
+
+    expect(result.ok).toBe(true)
+    expect(store.items[0].liked).toBe(false)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ liked: false })
+  })
+
+  it('请求期间 isPending 为 true，结束后清理', async () => {
+    let release
+    stubFetch(
+      () =>
+        new Promise((resolve) => {
+          release = resolve
+        })
+    )
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const pending = store.toggleLike('a')
+
+    expect(store.isPending('a')).toBe(true)
+    expect(store.isPending('b')).toBe(false)
+
+    release(jsonResponse({ data: likedPost }))
+    await pending
+
+    expect(store.isPending('a')).toBe(false)
+  })
+
+  it('同一 id 已有请求时返回 pending 且不再发请求', async () => {
+    let release
+    const fetchMock = stubFetch(
+      () =>
+        new Promise((resolve) => {
+          release = resolve
+        })
+    )
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const first = store.toggleLike('a')
+    const second = await store.toggleLike('a')
+
+    expect(second).toEqual({ ok: false, reason: 'pending' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    release(jsonResponse({ data: likedPost }))
+    await expect(first).resolves.toMatchObject({ ok: true })
+  })
+
+  it('失败时列表保持不变、映射 network 并清理 pending', async () => {
+    stubFetch(async () => jsonResponse({ error: { code: 'BOOM' } }, 500))
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const result = await store.toggleLike('a')
+
+    expect(result).toEqual({ ok: false, reason: 'network' })
+    expect(store.error).toBe('network')
+    expect(store.items[0]).toEqual({ ...older, liked: false, likeCount: 0, favorited: false })
+    expect(store.isPending('a')).toBe(false)
+  })
+
+  it('404 映射为 not-found', async () => {
+    stubFetch(async () =>
+      jsonResponse({ error: { code: 'NOT_FOUND', message: '内容不存在' } }, 404)
+    )
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const result = await store.toggleLike('a')
+
+    expect(result).toEqual({ ok: false, reason: 'not-found' })
+    expect(store.items[0].liked).toBe(false)
+  })
+})
+
+describe('usePostsStore.toggleFavorite', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('未收藏时取反为 true 并替换列表项', async () => {
+    const favorited = { ...older, liked: false, likeCount: 0, favorited: true }
+    const fetchMock = stubFetch(async () => jsonResponse({ data: favorited }))
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const result = await store.toggleFavorite('a')
+
+    expect(result.ok).toBe(true)
+    expect(store.items[0]).toEqual(favorited)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ favorited: true })
+    expect(fetchMock.mock.calls[0][1].method).toBe('PATCH')
+  })
+
+  it('已收藏时取反为 false', async () => {
+    const fetchMock = stubFetch(async () =>
+      jsonResponse({ data: { ...older, liked: false, likeCount: 0, favorited: false } })
+    )
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: true }])
+
+    await store.toggleFavorite('a')
+
+    expect(store.items[0].favorited).toBe(false)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ favorited: false })
+  })
+
+  it('失败时返回 network 且列表保持不变', async () => {
+    stubFetch(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    const store = seedPosts([{ ...older, liked: false, likeCount: 0, favorited: false }])
+
+    const result = await store.toggleFavorite('a')
+
+    expect(result).toEqual({ ok: false, reason: 'network' })
+    expect(store.items[0].favorited).toBe(false)
+    expect(store.isPending('a')).toBe(false)
   })
 })

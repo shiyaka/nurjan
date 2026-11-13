@@ -291,6 +291,38 @@
   color: var(--text-muted);
 }
 
+.timeline__filters {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.timeline__filter {
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  transition: color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+
+.timeline__filter:hover {
+  color: var(--brand-1);
+}
+
+.timeline__filter.is-active {
+  background: #fff;
+  color: var(--brand-1);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
 .chip {
   padding: 2px 9px;
   border-radius: var(--radius-pill);
@@ -309,6 +341,14 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.feed-empty {
+  padding: var(--space-6) 0;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 /* ---------- 帖子卡片 ---------- */
@@ -371,15 +411,61 @@
 
 .post__actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
-  opacity: 0;
-  transition: opacity var(--dur) var(--ease-out);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: 8px;
 }
 
-.post:hover .post__actions,
-.post:focus-within .post__actions {
-  opacity: 1;
+.post__reactions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out);
+}
+
+.reaction-btn svg {
+  display: block;
+}
+
+.reaction-btn:hover:not(:disabled) {
+  color: var(--brand-1);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.post__like:hover:not(:disabled),
+.post__like.is-active {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.post__favorite:hover:not(:disabled),
+.post__favorite.is-active {
+  color: var(--brand-1);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.reaction-btn:disabled {
+  color: var(--text-faint);
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 /* 列表进出场动效 */

@@ -79,6 +79,20 @@ export function createPostsApi(baseUrl = DEFAULT_BASE) {
       return post
     },
 
+    async update(id, patch) {
+      const payload = await request(`${postsPath}/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch || {})
+      })
+
+      const post = payload?.data
+      if (!post || typeof post !== 'object') {
+        throw new ApiError('响应格式不正确', { status: 200, code: 'INVALID_RESPONSE' })
+      }
+
+      return post
+    },
+
     async remove(id) {
       await request(`${postsPath}/${encodeURIComponent(id)}`, { method: 'DELETE' })
       return null
