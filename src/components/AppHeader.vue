@@ -12,9 +12,9 @@ defineOptions({ name: 'AppHeader' })
           <span class="brand__tagline">轻量信息流</span>
         </span>
       </div>
-      <span class="local-pill" title="所有内容仅保存在当前浏览器中">
+      <span class="local-pill" title="数据保存在服务端内存中，服务重启后会清空">
         <span class="local-pill__dot" aria-hidden="true"></span>
-        仅存储在本机
+        内存存储
       </span>
     </div>
   </header>

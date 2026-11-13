@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import PostComposer from '@/components/PostComposer.vue'
 import PostList from '@/components/PostList.vue'
@@ -7,44 +7,38 @@ import EmptyState from '@/components/EmptyState.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import { usePostsStore } from '@/stores/posts'
 import { useToast } from '@/composables/useToast'
-import { STORAGE_KEY } from '@/constants'
 
 defineOptions({ name: 'App' })
+
+const FAILURE_MESSAGE = '操作失败，请检查服务是否可用'
 
 const store = usePostsStore()
 const { message, visible, show } = useToast()
 
-store.hydrate()
+const showLoading = computed(() => store.loading || (!store.hydrated && !store.error))
 
-function handleSubmit(content) {
-  const result = store.add(content)
+onMounted(() => {
+  store.hydrate()
+})
+
+async function handleSubmit(content) {
+  const result = await store.add(content)
 
   if (!result.ok) {
-    show(result.reason === 'quota' ? '保存失败：本地存储空间可能已满' : '发布失败，请稍后重试')
+    if (result.reason === 'empty') {
+      return
+    }
+    show(result.reason === 'too-long' ? '内容超出长度限制' : FAILURE_MESSAGE)
     return
   }
 
-  show('已发布，仅保存在本机')
+  show('已发布')
 }
 
-function handleRemove(id) {
-  const result = store.remove(id)
-  show(result.ok ? '已删除' : '删除失败，请稍后重试')
+async function handleRemove(id) {
+  const result = await store.remove(id)
+  show(result.ok ? '已删除' : FAILURE_MESSAGE)
 }
-
-function handleStorage(event) {
-  if (event.key === STORAGE_KEY) {
-    store.hydrate()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('storage', handleStorage)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('storage', handleStorage)
-})
 </script>
 
 <template>
@@ -54,7 +48,7 @@ onBeforeUnmount(() => {
   <AppHeader />
 
   <main class="shell">
-    <PostComposer @submit="handleSubmit" />
+    <PostComposer :submitting="store.submitting" @submit="handleSubmit" />
 
     <section class="timeline" aria-labelledby="timeline-title">
       <div class="timeline__head">
@@ -64,13 +58,58 @@ onBeforeUnmount(() => {
 
       <PostList :posts="store.sorted" @remove="handleRemove" />
 
-      <EmptyState v-if="store.count === 0" />
+      <p v-if="showLoading" class="feed-loading" role="status">正在加载…</p>
+      <div v-else-if="store.error && !store.hydrated" class="feed-error" role="alert">
+        <p>加载失败，请检查服务是否可用。</p>
+        <button type="button" @click="store.hydrate()">重试</button>
+      </div>
+      <EmptyState v-else-if="store.hydrated && store.count === 0" />
     </section>
   </main>
 
   <footer class="app-footer">
-    <p>数据保存在当前浏览器的 Local Storage 中，清除站点数据即会一并移除。</p>
+    <p>数据保存在服务端内存中，服务重启后会清空。</p>
   </footer>
 
   <ToastHost :message="message" :visible="visible" />
 </template>
+
+<style scoped>
+.feed-loading {
+  padding: var(--space-6) 0;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.feed-error {
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+.feed-error p {
+  margin-bottom: var(--space-3);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.feed-error button {
+  padding: 6px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--brand-1);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+
+.feed-error button:hover {
+  border-color: var(--brand-1);
+  color: var(--brand-2);
+}
+</style>

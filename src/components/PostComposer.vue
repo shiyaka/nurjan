@@ -5,7 +5,8 @@ import { MAX_LENGTH } from '@/constants'
 defineOptions({ name: 'PostComposer' })
 
 const props = defineProps({
-  maxLength: { type: Number, default: MAX_LENGTH }
+  maxLength: { type: Number, default: MAX_LENGTH },
+  submitting: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['submit'])
@@ -18,7 +19,7 @@ const nearLimit = computed(() => length.value >= props.maxLength * 0.9 && length
 const overLimit = computed(() => length.value >= props.maxLength)
 
 function handleSubmit() {
-  if (!canSubmit.value) {
+  if (!canSubmit.value || props.submitting) {
     return
   }
 
@@ -60,7 +61,12 @@ function handleKeydown(event) {
         >
           <span id="counter-value">{{ length }}</span><span class="composer__counter-total"> / {{ maxLength }}</span>
         </p>
-        <button id="publish-btn" class="btn btn--primary" type="submit" :disabled="!canSubmit">
+        <button
+          id="publish-btn"
+          class="btn btn--primary"
+          type="submit"
+          :disabled="!canSubmit || submitting"
+        >
           <span>发布</span>
           <svg class="btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
             <path
