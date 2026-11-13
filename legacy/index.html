@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Nurjan —— 一个纯前端实现、数据仅保存在浏览器本地的轻量信息流应用。" />
+  <meta name="theme-color" content="#F6F7FB" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366F1'/%3E%3Cstop offset='0.5' stop-color='%238B5CF6'/%3E%3Cstop offset='1' stop-color='%23F472B6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Cpath d='M25 43V21l14 22V21' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='square' stroke-linejoin='miter'/%3E%3C/svg%3E" />
+  <title>Nurjan · 轻量信息流</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient--one" aria-hidden="true"></div>
+  <div class="ambient ambient--two" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <div class="app-header__inner">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">N</span>
+        <span class="brand__text">
+          <span class="brand__name">Nurjan</span>
+          <span class="brand__tagline">轻量信息流</span>
+        </span>
+      </div>
+      <span class="local-pill" title="所有内容仅保存在当前浏览器中">
+        <span class="local-pill__dot" aria-hidden="true"></span>
+        仅存储在本机
+      </span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="composer" aria-labelledby="composer-title">
+      <h1 class="visually-hidden" id="composer-title">发布新内容</h1>
+      <form class="composer__form" id="composer-form" novalidate>
+        <div class="composer__row">
+          <span class="avatar avatar--self" aria-hidden="true">我</span>
+          <label class="visually-hidden" for="composer-input">此刻的想法</label>
+          <textarea
+            class="composer__input"
+            id="composer-input"
+            name="content"
+            rows="3"
+            maxlength="280"
+            placeholder="此刻的想法，写下来吧…"
+            autocomplete="off"
+          ></textarea>
+        </div>
+        <div class="composer__footer">
+          <p class="composer__counter" id="composer-counter">
+            <span id="counter-value">0</span><span class="composer__counter-total"> / 280</span>
+          </p>
+          <button class="btn btn--primary" id="publish-btn" type="submit" disabled>
+            <span>发布</span>
+            <svg class="btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path d="M4.5 12.5 19 5l-4.2 14.6-3.6-5.1-4.7-1.6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <path d="M11.2 14.5 19 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="timeline" aria-labelledby="timeline-title">
+      <div class="timeline__head">
+        <h2 class="timeline__title" id="timeline-title">时间线</h2>
+        <span class="chip" id="post-count" hidden>0 条</span>
+      </div>
+
+      <ul class="feed" id="feed" aria-live="polite"></ul>
+
+      <div class="empty-state" id="empty-state">
+        <div class="empty-state__icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="30" height="30" focusable="false">
+            <path d="M14 34h20M17 26h14M20 18h8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+            <circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 5" stroke-linecap="round" />
+          </svg>
+        </div>
+        <p class="empty-state__title">这里还很安静</p>
+        <p class="empty-state__hint">在上方写下第一条内容，它只会留在你的浏览器里。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>数据保存在当前浏览器的 Local Storage 中，清除站点数据即会一并移除。</p>
+  </footer>
+
+  <template id="post-template">
+    <li class="post">
+      <span class="avatar post__avatar" aria-hidden="true">我</span>
+      <div class="post__body">
+        <div class="post__meta">
+          <span class="post__author">我</span>
+          <time class="post__time"></time>
+        </div>
+        <p class="post__content"></p>
+        <div class="post__actions">
+          <button class="link-btn post__delete" type="button" aria-label="删除这条内容">删除</button>
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
