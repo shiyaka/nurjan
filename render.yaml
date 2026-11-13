@@ -1,0 +1,16 @@
+# Render Blueprint：把仓库内的 Hono API（server/）部署为免费 Web Service。
+# 部署完成后，把得到的 https://<service>.onrender.com 填到 GitHub 仓库变量
+# VITE_API_BASE，Pages 前端即可跨域调用（server 侧 CORS 已允许任意来源）。
+services:
+  - type: web
+    name: nurjan-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/posts
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
