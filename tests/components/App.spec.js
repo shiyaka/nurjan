@@ -63,6 +63,7 @@ describe('App 集成', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(wrapper.find('.feed-loading').exists()).toBe(false)
     expect(wrapper.find('.empty-state').exists()).toBe(true)
+    expect(wrapper.get('.empty-state__hint').text()).toContain('服务端')
     expect(wrapper.find('#post-count').exists()).toBe(false)
     wrapper.unmount()
   })

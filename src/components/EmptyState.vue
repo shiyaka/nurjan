@@ -26,6 +26,6 @@ defineOptions({ name: 'EmptyState' })
       </svg>
     </div>
     <p class="empty-state__title">这里还很安静</p>
-    <p class="empty-state__hint">在上方写下第一条内容，它只会留在你的浏览器里。</p>
+    <p class="empty-state__hint">在上方写下第一条内容，它会保存在服务端内存中。</p>
   </div>
 </template>
