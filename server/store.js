@@ -8,6 +8,8 @@ function defaultGenerateId() {
   return `p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+const PATCHABLE_FLAGS = ['liked', 'favorited']
+
 export function createPostRepository({ now = Date.now, generateId = defaultGenerateId } = {}) {
   let posts = []
 
@@ -23,10 +25,44 @@ export function createPostRepository({ now = Date.now, generateId = defaultGener
         id: generateId(),
         content,
         author: DEFAULT_AUTHOR,
-        createdAt: now()
+        createdAt: now(),
+        liked: false,
+        likeCount: 0,
+        favorited: false
       }
       posts = [post, ...posts]
       return { ...post }
+    },
+
+    update(id, patch = {}) {
+      const index = posts.findIndex((post) => post.id === id)
+      if (index < 0) {
+        return null
+      }
+
+      const current = posts[index]
+      const next = { ...current }
+      const source = patch && typeof patch === 'object' ? patch : {}
+
+      for (const field of PATCHABLE_FLAGS) {
+        const value = source[field]
+        if (typeof value !== 'boolean') {
+          continue
+        }
+
+        if (field === 'liked') {
+          if (value === current.liked) {
+            continue
+          }
+          next.liked = value
+          next.likeCount = Math.max(0, current.likeCount + (value ? 1 : -1))
+        } else {
+          next.favorited = value
+        }
+      }
+
+      posts = [...posts.slice(0, index), next, ...posts.slice(index + 1)]
+      return { ...next }
     },
 
     remove(id) {
