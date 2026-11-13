@@ -14,7 +14,10 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
 }
 
 afterEach(() => {
-  localStorage.clear()
+  // 服务端测试使用 node 环境，没有 localStorage
+  if (typeof globalThis.localStorage !== 'undefined') {
+    globalThis.localStorage.clear()
+  }
   vi.useRealTimers()
   vi.restoreAllMocks()
 })

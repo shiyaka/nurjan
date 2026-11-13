@@ -67,4 +67,14 @@ describe('PostComposer', () => {
 
     expect(wrapper.emitted('submit')).toBeUndefined()
   })
+
+  it('提交流程进行中禁用按钮且不重复提交', async () => {
+    const wrapper = mount(PostComposer, { props: { submitting: true } })
+
+    await wrapper.get('#composer-input').setValue('内容')
+    expect(wrapper.get('#publish-btn').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('#composer-input').trigger('keydown', { key: 'Enter', ctrlKey: true })
+    expect(wrapper.emitted('submit')).toBeUndefined()
+  })
 })
