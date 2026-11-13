@@ -1,3 +1,8 @@
+import { createBrowserPostsApi } from './browserPosts'
+import { ApiError } from './errors'
+
+export { ApiError }
+
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
   Accept: 'application/json'
@@ -5,14 +10,9 @@ const JSON_HEADERS = {
 
 const DEFAULT_BASE = (import.meta.env?.VITE_API_BASE || '').replace(/\/+$/, '')
 
-export class ApiError extends Error {
-  constructor(message, { status = 0, code = 'UNKNOWN' } = {}) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.code = code
-  }
-}
+// VITE_API_BASE=browser 时启用纯静态演示模式（GitHub Pages），数据存浏览器本地；
+// 其余取值视为后端 API 基址，空字符串表示同源部署。
+export const isBrowserStorage = DEFAULT_BASE === 'browser'
 
 /**
  * 通过 base 注入 API 地址：同源部署时为空字符串，
@@ -100,4 +100,4 @@ export function createPostsApi(baseUrl = DEFAULT_BASE) {
   }
 }
 
-export const postsApi = createPostsApi()
+export const postsApi = isBrowserStorage ? createBrowserPostsApi() : createPostsApi()

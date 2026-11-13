@@ -6,11 +6,15 @@ import PostList from '@/components/PostList.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import { usePostsStore } from '@/stores/posts'
+import { isBrowserStorage } from '@/api/posts'
 import { useToast } from '@/composables/useToast'
 
 defineOptions({ name: 'App' })
 
 const FAILURE_MESSAGE = '操作失败，请检查服务是否可用'
+const STORAGE_NOTE = isBrowserStorage
+  ? '纯静态演示：数据保存在当前浏览器本地，刷新不丢失，不同设备之间不共享。'
+  : '数据保存在服务端内存中，服务重启后会清空。'
 
 const store = usePostsStore()
 const { message, visible, show } = useToast()
@@ -122,7 +126,7 @@ async function handleFavorite(id) {
   </main>
 
   <footer class="app-footer">
-    <p>数据保存在服务端内存中，服务重启后会清空。</p>
+    <p>{{ STORAGE_NOTE }}</p>
   </footer>
 
   <ToastHost :message="message" :visible="visible" />
