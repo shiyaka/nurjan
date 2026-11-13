@@ -11,6 +11,9 @@ desktop.ini
 *.suo
 *.ntvs*
 
+# 本地并行开发 worktree
+.worktrees/
+
 # 依赖与构建产物
 node_modules/
 dist/
