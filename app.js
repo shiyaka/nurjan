@@ -1,5 +1,5 @@
 /**
- * Lumen · 轻量信息流
+ * Nurjan · 轻量信息流
  * 纯前端实现，数据保存在 localStorage 中。
  * 结构：store（数据层）→ view（渲染层）→ controller（交互层）
  */
@@ -23,7 +23,7 @@
       try {
         raw = window.localStorage.getItem(STORAGE_KEY);
       } catch (error) {
-        console.warn('[lumen] 无法访问本地存储，本次会话不会持久化。', error);
+        console.warn('[nurjan] 无法访问本地存储，本次会话不会持久化。', error);
         return [];
       }
 
@@ -33,7 +33,7 @@
       try {
         parsed = JSON.parse(raw);
       } catch (error) {
-        console.warn('[lumen] 本地数据解析失败，已回退为空列表。', error);
+        console.warn('[nurjan] 本地数据解析失败，已回退为空列表。', error);
         return [];
       }
 
@@ -72,7 +72,7 @@
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
         return true;
       } catch (error) {
-        console.warn('[lumen] 本地数据写入失败（可能已超出容量限制）。', error);
+        console.warn('[nurjan] 本地数据写入失败（可能已超出容量限制）。', error);
         return false;
       }
     }
