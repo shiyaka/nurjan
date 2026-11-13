@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, postsApi } from '@/api/posts'
+import { ApiError, createPostsApi, postsApi } from '@/api/posts'
 
 function jsonResponse(body, status = 200) {
   return {
@@ -60,6 +60,26 @@ describe('postsApi.list', () => {
     stubFetch(async () => jsonResponse({}))
 
     await expect(postsApi.list()).resolves.toEqual([])
+  })
+})
+
+describe('createPostsApi', () => {
+  it('使用注入的 API base 拼接绝对地址并去除末尾斜杠', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({ data: [] }))
+    const api = createPostsApi('https://api.example.com/')
+
+    await api.list()
+
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/api/posts')
+  })
+
+  it('DELETE 也使用注入的 base', async () => {
+    const fetchMock = stubFetch(async () => noContentResponse())
+    const api = createPostsApi('https://api.example.com')
+
+    await api.remove('p/1')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/api/posts/p%2F1')
   })
 })
 

@@ -153,6 +153,33 @@ describe('DELETE /api/posts/:id', () => {
   })
 })
 
+describe('CORS', () => {
+  it('OPTIONS 预检请求返回允许跨域的头', async () => {
+    const response = await app.request('/api/posts', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://shiyaka.github.io',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type'
+      }
+    })
+
+    expect(response.status).toBe(204)
+    expect(response.headers.get('access-control-allow-origin')).toBeTruthy()
+    expect(response.headers.get('access-control-allow-methods')).toContain('POST')
+    expect(response.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('content-type')
+  })
+
+  it('普通请求也返回跨域响应头', async () => {
+    const response = await app.request('/api/posts', {
+      headers: { Origin: 'https://shiyaka.github.io' }
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('access-control-allow-origin')).toBeTruthy()
+  })
+})
+
 describe('unknown routes', () => {
   it('responds 404 NOT_FOUND for unknown /api routes', async () => {
     for (const path of ['/api/unknown', '/api/posts/extra/path']) {

@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { createPostRepository } from './store.js'
 
 export const MAX_CONTENT_LENGTH = 280
@@ -9,6 +10,17 @@ function fail(c, status, code, message) {
 
 export function createApp({ repository = createPostRepository() } = {}) {
   const app = new Hono()
+
+  // 前端可能部署在 GitHub Pages 等独立静态域名，需要跨域访问 API。
+  app.use(
+    '/api/*',
+    cors({
+      origin: '*',
+      allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Accept'],
+      maxAge: 600
+    })
+  )
 
   app.get('/api/posts', (c) => c.json({ data: repository.list() }))
 

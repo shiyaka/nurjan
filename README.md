@@ -112,12 +112,25 @@ $env:PORT = 3000; npm start
 
 ## 部署说明
 
-GitHub Pages 只能托管静态文件，无法运行 Hono 服务，因此项目改为**单服务自托管**：
+### 方式一：单服务自托管（Node 同时提供页面与 API）
 
 1. 服务器安装 Node.js 20+；
 2. `npm ci && npm run build`；
 3. `PORT=8080 npm start`；
 4. 用 Nginx 等反向代理到该端口（或直接暴露），并配置 HTTPS。
+
+### 方式二：GitHub Pages 前端 + 独立 API
+
+Pages 只能托管静态文件，Hono 必须部署在可运行 Node 的环境（如 CloudBase / EdgeOne / 自有服务器）。前端通过构建变量指向 API：
+
+```bash
+VITE_API_BASE=https://your-api.example.com npm run build
+```
+
+GitHub 仓库需配置 Actions Variable `VITE_API_BASE`（Settings → Secrets and variables → Actions → Variables），
+`deploy-pages.yml` 会在该变量存在时构建并发布到 <https://shiyaka.github.io/nurjan/>，未配置时自动跳过，避免发布不可用的页面。
+
+Hono 已内置 CORS（`/api/*` 允许跨域 GET / POST / DELETE），API 域名与 Pages 域名不同也能直接调用。
 
 ## License
 
